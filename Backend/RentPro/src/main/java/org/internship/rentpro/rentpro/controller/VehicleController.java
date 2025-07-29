@@ -20,6 +20,7 @@ public class VehicleController {
 
     @PostMapping("/add")
     public ResponseEntity<Vehicle> addVehicle(
+            @RequestParam("vehicleNumber") String vehicleNumber,
             @RequestParam("vehicleType") String vehicleType,
             @RequestParam("brand") String brand,
             @RequestParam("model") String model,
@@ -34,6 +35,7 @@ public class VehicleController {
             @RequestParam("imageUrl") String imageUrl  // new: image as URL
     ) {
         Vehicle vehicle = new Vehicle();
+        vehicle.setVehicleNumber(vehicleNumber);
         vehicle.setVehicleType(vehicleType);
         vehicle.setBrand(brand);
         vehicle.setModel(model);
