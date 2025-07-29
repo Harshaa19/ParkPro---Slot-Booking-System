@@ -16,6 +16,7 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String vehicleNumber;
     private String vehicleType;      // Car, Bike, Van, etc.
     private String brand;            // BMW, Honda, etc.
     private String model;            // X5, Hornet, etc.
@@ -30,4 +31,6 @@ public class Vehicle {
 
     @Lob
     private String imageUrl; // stores image URL instead of file
+
+    private String vehicleStatus; // "Available" or "Booked"
 }

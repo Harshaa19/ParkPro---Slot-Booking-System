@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children, requiredRole }) {
 
   // Role mismatch
   if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/unauthorized" replace />; // Optional: create a 403 Unauthorized page
+    return <Navigate to="/unauthorized" replace />; 
   }
 
   return children;

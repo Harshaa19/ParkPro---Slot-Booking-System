@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .with(new CorsConfigurer<>(), cors -> cors
                         .configurationSource(request -> {
                             CorsConfiguration config = new CorsConfiguration();
-                            config.setAllowedOrigins(List.of("http://localhost:5173"));
+                            config.setAllowedOrigins(List.of("http://localhost:5173")); // frontend origin
                             config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                             config.setAllowedHeaders(List.of("*"));
                             config.setAllowCredentials(true);
@@ -36,31 +36,31 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/user/register", "/api/user/login").permitAll()
-                        .requestMatchers("/api/admin/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/parking-lots/all", "/api/parking-lots/{id}").permitAll()
 
-//                         Admin parking lot management
-                        .requestMatchers("/api/parking-lots/admin/**").hasAuthority("ROLE_ADMIN")
+                        // ✅ Public endpoints
+                        .requestMatchers("/api/user/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/user/register").permitAll()
 
-                        // Bookings
-                        .requestMatchers(HttpMethod.POST, "/api/bookings/parking").hasAuthority("ROLE_USER")
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/user/**").hasAuthority("ROLE_USER")
+                        // ✅ Public GET endpoints for vehicles
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles/all", "/api/vehicles/{id}").permitAll()
+
+                        // ✅ Booking routes — User only
+                        .requestMatchers(HttpMethod.POST, "/api/bookings").hasAuthority("ROLE_USER")
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/my-bookings").hasAuthority("ROLE_USER")
                         .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").hasAuthority("ROLE_USER")
 
-                        // Vehicle
-                        .requestMatchers("/api/vehicles/**").hasAuthority("ROLE_USER")
+                        // ✅ Vehicle management — Admin only (non-GET)
+                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasAuthority("ROLE_ADMIN")
 
-                        // User
-                        .requestMatchers("/api/user/**").hasAuthority("ROLE_USER")
+                        // ✅ Admin and User-specific APIs
+                        .requestMatchers("/api/admin/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/user/me").hasAuthority("ROLE_USER")
 
-                        // Admin-specific (general)
-                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-
+                        // ✅ All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

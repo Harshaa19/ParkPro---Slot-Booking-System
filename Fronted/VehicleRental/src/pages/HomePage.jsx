@@ -5,14 +5,14 @@ import Testimonial from '../components/Testimonal'
 import WorkingSteps from '../components/WorkingSteps'
 import Footer from '../components/Footer'
 import BottomFooter from '../components/BottomFooter'
-import FeaturedParkingSpots from '../components/FeaturedParkingSpots'
+import FeaturedVehicles from '../components/FeaturedVehicles'
 
 const HomePage = () => {
   return (
     <>
         <Navbar/>
         <HeroSection/>
-        <FeaturedParkingSpots/>
+        <FeaturedVehicles/>
         <Testimonial/>
         <WorkingSteps/>
         <Footer/>

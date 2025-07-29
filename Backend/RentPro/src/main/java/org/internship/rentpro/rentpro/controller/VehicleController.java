@@ -5,10 +5,9 @@ import org.internship.rentpro.rentpro.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -32,7 +31,7 @@ public class VehicleController {
             @RequestParam("seatingCapacity") String seatingCapacity,
             @RequestParam("location") String location,
             @RequestParam("description") String description,
-            @RequestParam("imageUrl") String imageUrl  // new: image as URL
+            @RequestParam("imageUrl") String imageUrl
     ) {
         Vehicle vehicle = new Vehicle();
         vehicle.setVehicleNumber(vehicleNumber);
@@ -47,12 +46,12 @@ public class VehicleController {
         vehicle.setSeatingCapacity(seatingCapacity);
         vehicle.setLocation(location);
         vehicle.setDescription(description);
-        vehicle.setImageUrl(imageUrl); // set image URL
+        vehicle.setImageUrl(imageUrl);
+        vehicle.setVehicleStatus("Available"); // Default
 
         Vehicle savedVehicle = vehicleService.saveVehicle(vehicle);
         return ResponseEntity.ok(savedVehicle);
     }
-
 
     @PutMapping("/{id}")
     public ResponseEntity<Vehicle> updateVehicle(@PathVariable Long id, @RequestBody Vehicle vehicle) {
@@ -61,6 +60,33 @@ public class VehicleController {
                     vehicle.setId(id);
                     Vehicle updated = vehicleService.saveVehicle(vehicle);
                     return ResponseEntity.ok(updated);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<String> updateVehicleStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        String requestedStatus = payload.get("status");
+
+        if (requestedStatus == null || requestedStatus.isEmpty()) {
+            return ResponseEntity.badRequest().body("Status must be provided.");
+        }
+
+        return vehicleService.getVehicleById(id)
+                .map(vehicle -> {
+                    String currentStatus = vehicle.getVehicleStatus();
+
+                    boolean isValidTransition = (currentStatus.equals("Available") && requestedStatus.equals("Booked"))
+                            || (currentStatus.equals("Booked") && requestedStatus.equals("Available"));
+
+                    if (!isValidTransition) {
+                        return ResponseEntity.badRequest().body(
+                                "Invalid status transition from " + currentStatus + " to " + requestedStatus);
+                    }
+
+                    vehicle.setVehicleStatus(requestedStatus);
+                    vehicleService.saveVehicle(vehicle);
+                    return ResponseEntity.ok("Vehicle status updated to: " + requestedStatus);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -76,10 +102,10 @@ public class VehicleController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    @GetMapping("/type/{vehicleType}")
-    public List<Vehicle> getVehicleByType(@PathVariable String vehicleType){
-        return vehicleService.getVehicleByType(vehicleType);
 
+    @GetMapping("/type/{vehicleType}")
+    public List<Vehicle> getVehicleByType(@PathVariable String vehicleType) {
+        return vehicleService.getVehicleByType(vehicleType);
     }
 
     @DeleteMapping("/{id}")

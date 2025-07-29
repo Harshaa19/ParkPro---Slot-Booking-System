@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import AdminDashboard2 from './AdminDashboard2';
+import { useAuth } from '../context/AuthContext';
 
 export default function ManageVehicles() {
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState([]);
   const [filteredVehicles, setFilteredVehicles] = useState([]);
   const [selectedType, setSelectedType] = useState('');
@@ -10,28 +12,48 @@ export default function ManageVehicles() {
 
   const vehicleTypes = ['Car', 'Bike', 'SUV', 'Van'];
 
+  const token = user?.token || localStorage.getItem('token');
+
   useEffect(() => {
-    fetch("http://localhost:8080/api/vehicles/all")
-      .then(res => res.json())
+    if (!token) return;
+
+    fetch("http://localhost:8080/api/vehicles/all", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized or failed to fetch');
+        return res.json();
+      })
       .then(data => {
         setVehicles(data);
+        setFilteredVehicles(data);
       })
       .catch(err => console.error("Error fetching vehicles:", err));
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (selectedType) {
-      setFilteredVehicles(vehicles.filter(v => v.vehicleType === selectedType));
+      setFilteredVehicles(
+        vehicles.filter(v => v.vehicleType?.toLowerCase() === selectedType.toLowerCase())
+      );
     } else {
-      setFilteredVehicles([]);
+      setFilteredVehicles(vehicles);
     }
   }, [selectedType, vehicles]);
 
   const handleDelete = async (id) => {
     try {
-      await fetch(`http://localhost:8080/api/vehicles/${id}`, {
-        method: "DELETE"
+      const res = await fetch(`http://localhost:8080/api/vehicles/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
+      if (!res.ok) throw new Error("Failed to delete vehicle");
+
       setVehicles(prev => prev.filter(v => v.id !== id));
     } catch (err) {
       console.error("Failed to delete:", err);
@@ -44,49 +66,53 @@ export default function ManageVehicles() {
       const res = await fetch(`http://localhost:8080/api/vehicles/${editVehicle.id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(editVehicle)
+        body: JSON.stringify(editVehicle),
       });
 
-      if (res.ok) {
-        const updated = await res.json();
-        setVehicles(prev => prev.map(v => (v.id === updated.id ? updated : v)));
-        setEditVehicle(null);
-      } else {
-        alert("Failed to update vehicle");
-      }
+      if (!res.ok) throw new Error("Update failed");
+
+      const updated = await res.json();
+      setVehicles(prev => prev.map(v => (v.id === updated.id ? updated : v)));
+      setEditVehicle(null);
     } catch (err) {
       console.error("Error updating vehicle:", err);
     }
   };
 
   return (
-    <div className='flex'>
-      <div className='w-64'>
+    <div className="flex">
+      {/* Fixed Sidebar */}
+      <div className="w-64 h-screen fixed left-0 top-0 border-r bg-white shadow-lg z-10">
         <AdminDashboard2 />
       </div>
-      <div className="p-6 flex-1">
+
+      {/* Scrollable Content */}
+      <div className="ml-64 p-6 flex-1">
         <h2 className="text-2xl font-bold mb-6">Manage Vehicles</h2>
 
+        {/* Filter */}
         <div className="mb-6">
-          <label className="block font-medium text-gray-700 mb-2">Select Vehicle Type</label>
+          <label className="block font-medium text-gray-700 mb-2">Filter by Type</label>
           <select
             className="w-full md:w-1/3 px-4 py-2 border rounded-md shadow-sm"
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
           >
-            <option value="">-- Choose Type --</option>
+            <option value="">All</option>
             {vehicleTypes.map(type => (
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
         </div>
 
+        {/* Vehicle Cards */}
         {filteredVehicles.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVehicles.map(vehicle => (
-              <div key={vehicle.id} className="bg-white rounded-xl shadow-md border overflow-hidden">
+              <div key={vehicle.id} className="bg-white rounded-xl shadow-md border overflow-hidden col-span-1 relative">
                 {vehicle.imageUrl && (
                   <img
                     src={vehicle.imageUrl}
@@ -98,7 +124,7 @@ export default function ManageVehicles() {
                   <h3 className="text-lg font-semibold">{vehicle.brand} {vehicle.model}</h3>
                   <p><strong>Type:</strong> {vehicle.vehicleType}</p>
                   <p><strong>Year:</strong> {vehicle.year}</p>
-                  <p><strong>Price:</strong> ${vehicle.price} / day</p>
+                  <p><strong>Price:</strong> ₹{vehicle.price} / day</p>
 
                   <div className="flex gap-3 mt-4">
                     <button
@@ -115,61 +141,67 @@ export default function ManageVehicles() {
                     </button>
                   </div>
                 </div>
+
+                {/* Inline Edit Form */}
+                {editVehicle?.id === vehicle.id && (
+                  <form onSubmit={handleUpdate} className="bg-gray-100 p-4 mt-4 rounded-xl border-t">
+                    <h3 className="text-md font-semibold mb-2">Update Vehicle</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        ['Brand', 'brand'],
+                        ['Model', 'model'],
+                        ['Year', 'year'],
+                        ['Price', 'price'],
+                        ['Transmission', 'transmission'],
+                        ['Fuel Type', 'fuelType'],
+                        ['Seating Capacity', 'seatingCapacity'],
+                        ['Location', 'location'],
+                      ].map(([label, field]) => (
+                        <input
+                          key={field}
+                          type="text"
+                          placeholder={label}
+                          value={editVehicle[field]}
+                          onChange={(e) => setEditVehicle({ ...editVehicle, [field]: e.target.value })}
+                          className="border px-3 py-2 rounded"
+                        />
+                      ))}
+                      <input
+                        type="text"
+                        placeholder="Image URL"
+                        value={editVehicle.imageUrl}
+                        onChange={(e) => setEditVehicle({ ...editVehicle, imageUrl: e.target.value })}
+                        className="border px-3 py-2 rounded col-span-2"
+                      />
+                      <textarea
+                        placeholder="Description"
+                        value={editVehicle.description}
+                        onChange={(e) => setEditVehicle({ ...editVehicle, description: e.target.value })}
+                        className="border px-3 py-2 rounded col-span-2"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="mt-3 flex gap-3">
+                      <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditVehicle(null)}
+                        className="text-gray-600 hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             ))}
           </div>
-        ) : selectedType ? (
-          <p className="text-gray-500">No vehicles found for type: {selectedType}</p>
         ) : (
-          <p className="text-gray-500">Please select a vehicle type.</p>
-        )}
-
-        {editVehicle && (
-          <form onSubmit={handleUpdate} className="mt-10 bg-gray-50 p-6 rounded-xl shadow-md border max-w-2xl">
-            <h3 className="text-xl font-semibold mb-4">Update Vehicle</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Brand"
-                value={editVehicle.brand}
-                onChange={(e) => setEditVehicle({ ...editVehicle, brand: e.target.value })}
-                className="border px-3 py-2 rounded"
-              />
-              <input
-                type="text"
-                placeholder="Model"
-                value={editVehicle.model}
-                onChange={(e) => setEditVehicle({ ...editVehicle, model: e.target.value })}
-                className="border px-3 py-2 rounded"
-              />
-              <input
-                type="number"
-                placeholder="Year"
-                value={editVehicle.year}
-                onChange={(e) => setEditVehicle({ ...editVehicle, year: e.target.value })}
-                className="border px-3 py-2 rounded"
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={editVehicle.price}
-                onChange={(e) => setEditVehicle({ ...editVehicle, price: e.target.value })}
-                className="border px-3 py-2 rounded"
-              />
-            </div>
-            <div className="mt-4 flex gap-3">
-              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditVehicle(null)}
-                className="text-gray-600 hover:underline"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          <p className="text-gray-500">
+            {selectedType ? `No vehicles found for type: ${selectedType}` : "No vehicles available."}
+          </p>
         )}
       </div>
     </div>

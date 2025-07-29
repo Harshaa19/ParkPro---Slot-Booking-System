@@ -1,122 +1,81 @@
-// src/components/GenerateInvoice.jsx
-
-import React from 'react';
-import jsPDF from 'jspdf';
-import { FaFilePdf } from 'react-icons/fa';
+import React, { useRef } from 'react';
+import { FaPrint } from 'react-icons/fa';
 
 const GenerateInvoice = ({ booking, user }) => {
-  const calculateDuration = (fromTime, toTime) => {
-    if (!fromTime || !toTime) return 'N/A';
-    const [fromHour, fromMin] = fromTime.split(':').map(Number);
-    const [toHour, toMin] = toTime.split(':').map(Number);
-    const start = new Date(0, 0, 0, fromHour, fromMin);
-    const end = new Date(0, 0, 0, toHour, toMin);
-    let diff = (end - start) / (1000 * 60);
-    if (diff < 0) diff += 24 * 60;
-    const hrs = Math.floor(diff / 60);
-    const mins = diff % 60;
-    return `${hrs}h ${mins}m`;
+  const printRef = useRef();
+
+  const calculateDurationInDays = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'N/A';
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffInMs = end - start;
+    const days = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+    return `${days} day(s)`;
   };
 
-  const generateReceipt = () => {
-    const doc = new jsPDF();
+  const handlePrint = () => {
+    const printContents = printRef.current.innerHTML;
+    const originalContents = document.body.innerHTML;
 
-    doc.setFontSize(16);
-    doc.text('RentPro', 75, 15);
-    doc.setFontSize(10);
-    doc.line(10, 18, 200, 18);
-
-    let y = 25;
-
-    // Booking Info
-    doc.setFont('helvetica', 'bold');
-    doc.text('Booking ID:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${booking.id}`, 40, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(booking.bookingDate || 'N/A', 40, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Time:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${booking.fromTime || 'N/A'} - ${booking.toTime || 'N/A'}`, 40, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Duration:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(calculateDuration(booking.fromTime, booking.toTime), 40, y);
-    y += 10;
-
-    // User Info
-    doc.setFont('helvetica', 'bold');
-    doc.text('User Details', 10, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Name: ${user?.firstName || ''} ${user?.lastName || ''}`, 10, y);
-    y += 5;
-    doc.text(`Email: ${user?.email || 'N/A'}`, 10, y);
-    y += 5;
-    doc.text(`Phone: ${user?.phone|| 'N/A'}`, 10, y);
-    y += 10;
-
-    // Vehicle Info
-    doc.setFont('helvetica', 'bold');
-    doc.text('Vehicle Info', 10, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Vehicle Number: ${booking.vehicleNumber || 'N/A'}`, 10, y);
-    y += 5;
-    doc.text(`Vehicle Type: ${booking.vehicleType || 'N/A'}`, 10, y);
-    y += 10;
-
-    // Parking Lot Info
-    doc.setFont('helvetica', 'bold');
-    doc.text('Parking Lot', 10, y);
-    y += 6;
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Name: ${booking.parkingLot?.name || 'N/A'}`, 10, y);
-    y += 5;
-    doc.text(`Location: ${booking.parkingLot?.location || 'N/A'}`, 10, y);
-    y += 10;
-
-    // Price and Status
-    doc.setFont('helvetica', 'bold');
-    doc.text('Amount Paid:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`'₹'${booking.price || '0.00'}`, 50, y);
-    y += 6;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status:', 10, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(booking.status || 'N/A', 50, y);
-    y += 15;
-
-    // Footer
-    doc.setFontSize(10);
-    doc.setTextColor(150);
-    doc.text('Thank you for booking with RentPro!', 55, y);
-    y += 4;
-    doc.text('Visit again', 80, y + 5);
-
-    doc.save(`booking_receipt_${booking.id}.pdf`);
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // optional
   };
 
   return (
-    <div className="w-full flex justify-end mt-4">
-      <button
-        onClick={generateReceipt}
-        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-xl shadow-md transition duration-300"
-      >
-        <FaFilePdf className="text-white text-lg" />
-        Download Receipt
-      </button>
+    <div>
+      {/* Print Button */}
+      <div className="w-full flex justify-end mt-4">
+        <button
+          onClick={handlePrint}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition"
+        >
+          <FaPrint className="text-white text-lg" />
+          Print Receipt
+        </button>
+      </div>
+
+      {/* Printable Content */}
+      <div className="hidden print:block mt-8 px-6" ref={printRef}>
+        <div className="max-w-2xl mx-auto border border-gray-300 rounded-2xl p-8 shadow-lg bg-white text-gray-800">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-blue-700">RentPro Booking Receipt</h2>
+            <p className="text-sm text-gray-500">Your rental confirmation & invoice</p>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div>
+              <h4 className="text-md font-semibold border-b border-gray-300 mb-2 pb-1 text-gray-600">Booking Details</h4>
+              <p><strong>Booking ID:</strong> {booking.id}</p>
+              <p><strong>Pickup Date:</strong> {booking.pickupDate}</p>
+              <p><strong>Return Date:</strong> {booking.returnDate}</p>
+              <p><strong>Duration:</strong> {calculateDurationInDays(booking.pickupDate, booking.returnDate)}</p>
+            </div>
+
+            <div>
+              <h4 className="text-md font-semibold border-b border-gray-300 mb-2 pb-1 text-gray-600">User Details</h4>
+              <p><strong>Name:</strong> {user?.firstName} {user?.lastName}</p>
+              <p><strong>Email:</strong> {user?.email}</p>
+            </div>
+
+            <div>
+              <h4 className="text-md font-semibold border-b border-gray-300 mb-2 pb-1 text-gray-600">Vehicle Details</h4>
+              <p><strong>Vehicle Number:</strong> {booking.vehicleNumber}</p>
+            </div>
+
+            <div>
+              <h4 className="text-md font-semibold border-b border-gray-300 mb-2 pb-1 text-gray-600">Payment & Status</h4>
+              <p><strong>Total Amount:</strong> ₹{booking.totalAmount != null ? booking.totalAmount.toFixed(2) : 'N/A'}</p>
+              <p><strong>Status:</strong> {booking.status}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t pt-4 text-center text-sm text-gray-500">
+            <p>Thank you for renting with <span className="font-semibold text-blue-600">RentPro</span>!</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

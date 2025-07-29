@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -28,6 +27,17 @@ public class JWTAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
+
+        String path = request.getServletPath();
+
+        // ✅ Skip JWT validation for public routes
+        if (path.equals("/api/user/register") || path.equals("/api/user/login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Optional debug log
+        // System.out.println("Intercepted path: " + path);
 
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
@@ -43,28 +53,22 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String username = jwtUtil.extractEmail(token); // e.g., user@example.com
-        String role = jwtUtil.extractUserRole(token);  // e.g., ROLE_USER
-
-        System.out.println("Auth Header: " + authHeader);
-        System.out.println("Decoded user: " + username);
-        System.out.println("Decoded role: " + role);
+        String username = jwtUtil.extractEmail(token);
+        String role = jwtUtil.extractUserRole(token);
 
         List<SimpleGrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority(role)  // Use role as-is
+                new SimpleGrantedAuthority(role)
         );
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                new org.springframework.security.core.userdetails.User(username, "", authorities), // ✅ Use User object
+                new org.springframework.security.core.userdetails.User(username, "", authorities),
                 null,
                 authorities
         );
-        SecurityContextHolder.getContext().setAuthentication(auth);
 
         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
         SecurityContextHolder.getContext().setAuthentication(auth);
+
         filterChain.doFilter(request, response);
     }
-
 }

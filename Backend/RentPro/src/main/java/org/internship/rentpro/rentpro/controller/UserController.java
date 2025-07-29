@@ -72,9 +72,8 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id,
-                                         @RequestHeader("Authorization") String authHeader) {
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid Authorization header");
         }
@@ -87,16 +86,12 @@ public class UserController {
         }
 
         Long tokenUserId = jwtUtil.extractUserId(token);
-        if (!tokenUserId.equals(id)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
-        }
+        User user = userService.getUserById(tokenUserId);
 
-        User user = userService.getUserById(id);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
 
-        // Map User to DTO
         UserDTO dto = new UserDTO(
                 user.getId(),
                 user.getFirstName(),
@@ -108,4 +103,5 @@ public class UserController {
 
         return ResponseEntity.ok(dto);
     }
+
 }

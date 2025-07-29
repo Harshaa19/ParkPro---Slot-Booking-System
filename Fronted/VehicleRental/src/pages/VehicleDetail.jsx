@@ -1,28 +1,53 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, useParams ,useNavigate} from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import VehicleBookingPage from './VehicleBookingPage';
+import Navbar from '../components/NavBar'
+
 
 export default function VehicleDetails() {
   const { id } = useParams();
-  const [vehicle, setVehicle] = useState(null);
   const navigate = useNavigate();
+  const [vehicle, setVehicle] = useState(null);
+
   useEffect(() => {
-    fetch(`http://localhost:8080/api/vehicles/${id}`)
-      .then(res => res.json())
+    const token = localStorage.getItem('token');
+    fetch(`http://localhost:8080/api/vehicles/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized or not found');
+        return res.json();
+      })
       .then(data => setVehicle(data))
-      .catch(err => console.error('Failed to fetch vehicle details:', err));
+      .catch(err => {
+        console.error('Failed to fetch vehicle details:', err);
+        alert('Could not load vehicle details');
+      });
   }, [id]);
 
   if (!vehicle) {
-    return <div className="text-center py-20 text-xl font-semibold text-gray-700">Loading vehicle details...</div>;
+    return (
+      <div className="text-center py-20 text-xl font-semibold text-gray-700">
+        Loading vehicle details...
+      </div>
+    );
   }
 
   return (
+    <>
+    <Navbar/>
     <div className="max-w-6xl mx-auto px-4 py-10">
-      {/* Back Link */}
-      <div className="mb-6 text-sm text-blue-600 hover:underline cursor-pointer" onClick={()=>navigate("/")}>&larr; Back to All Vehicles</div>
+      <div
+        className="mb-6 text-sm text-blue-600 hover:underline cursor-pointer"
+        onClick={() => navigate('/')}
+      >
+        ← Back to All Vehicles
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Left Content */}
+        {/* Left Side - Vehicle Info */}
         <div className="lg:col-span-2">
           <img
             src={vehicle.imageUrl}
@@ -37,50 +62,40 @@ export default function VehicleDetails() {
             <p className="text-gray-500 text-md mt-1">
               {vehicle.vehicleType} • {vehicle.year}
             </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Vehicle Number: <span className="font-medium">{vehicle.vehicleNumber}</span>
+            </p>
           </div>
 
-          {/* Info badges */}
           <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium text-gray-700">
             <span className="bg-gray-100 px-4 py-2 rounded-full">{vehicle.seatingCapacity} Seats</span>
             <span className="bg-gray-100 px-4 py-2 rounded-full">{vehicle.fuelType}</span>
             <span className="bg-gray-100 px-4 py-2 rounded-full">{vehicle.transmission}</span>
             <span className="bg-gray-100 px-4 py-2 rounded-full">{vehicle.location}</span>
+            <span className="bg-gray-100 px-4 py-2 rounded-full">{vehicle.vehicleNumber}</span>
+            <span
+              className={`text-xs font-semibold px-3 py-1 rounded-full 
+                ${vehicle.vehicleStatus === 'Available'
+                  ? 'bg-green-100 text-green-700'
+                  : vehicle.vehicleStatus === 'Booked'
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-red-100 text-red-700'}
+              `}
+            >
+              {vehicle.vehicleStatus}
+            </span>
           </div>
 
-          {/* Description */}
           <div className="mt-8">
             <h3 className="text-xl font-semibold mb-2 text-gray-800">Description</h3>
             <p className="text-gray-600 leading-relaxed">{vehicle.description}</p>
           </div>
         </div>
 
-        {/* Booking Sidebar */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg h-fit">
-          <div className="text-3xl font-bold text-gray-800 mb-1">${vehicle.price}</div>
-          <p className="text-sm text-gray-500 mb-4">Per day (includes taxes & fees)</p>
-
-          <div className="mb-4">
-            <label className="block text-sm text-gray-600 mb-1">Pickup Date</label>
-            <input
-              type="date"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm text-gray-600 mb-1">Return Date</label>
-            <input
-              type="date"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200"
-            />
-          </div>
-
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition">
-            Book Now
-          </button>
-          <p className="text-xs text-gray-400 mt-2 text-center">No credit card required to reserve</p>
-        </div>
+        {/* Right Side - Booking Form */}
+        <VehicleBookingPage vehicle={vehicle} />
       </div>
     </div>
+    </>
   );
 }

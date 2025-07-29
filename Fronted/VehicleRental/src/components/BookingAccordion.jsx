@@ -1,99 +1,110 @@
-// components/BookingAccordion.jsx
 import React, { useState } from 'react';
 import {
   FaCalendarAlt,
-  FaClock,
-  FaMapMarkerAlt,
   FaCar,
   FaTrash,
+  FaClock,
+  FaChevronDown,
+  FaChevronUp,
 } from 'react-icons/fa';
 import GenerateInvoice from './GenerateInvoice';
 
-export default function BookingAccordion({ booking, onCancel, user }) {
+export default function BookingAccordion({ booking, onCancel, isCancelling, user }) {
   const [isOpen, setIsOpen] = useState(false);
   const toggleOpen = () => setIsOpen((prev) => !prev);
 
-  const parseTimeToMinutes = (timeStr) => {
-    if (!timeStr || !timeStr.includes(':')) return 0;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
+  const status = booking?.status?.toUpperCase() || 'PENDING';
+  const statusColor = {
+    CONFIRMED: 'bg-green-100 text-green-700',
+    CANCELLED: 'bg-red-100 text-red-700',
+    PENDING: 'bg-yellow-100 text-yellow-700',
+  }[status] || 'bg-gray-100 text-gray-700';
+
+  const start = new Date(booking?.pickupDate);
+  const end = new Date(booking?.returnDate);
+  const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+  const handleCancel = (id) => {
+    if (window.confirm('Are you sure you want to cancel this booking?')) {
+      onCancel(id);
+    }
   };
 
-  const date = booking.bookingDate || booking.startDate?.split('T')[0] || 'N/A';
-  const fromTime = booking.fromTime || booking.startDate?.split('T')[1]?.slice(0, 5) || 'N/A';
-  const toTime = booking.toTime || booking.endDate?.split('T')[1]?.slice(0, 5) || 'N/A';
-
-  const fromMinutes = parseTimeToMinutes(fromTime);
-  const toMinutes = parseTimeToMinutes(toTime);
-  const durationMinutes = toMinutes - fromMinutes;
-  const durationHours = durationMinutes > 0 ? durationMinutes / 60 : 0;
-
-  const pricePerHour = booking.parkingSpot?.pricePerHour || booking.pricePerHour || 0;
-  const totalPrice = booking.price || (pricePerHour && durationHours ? durationHours * pricePerHour : 0);
-
-  const vehicle = booking.vehicleNumber || booking.vehicle?.vehicleNumber || 'N/A';
-  const location = booking.parkingLot?.name || 'Unknown Lot';
-  const place = booking.parkingLot?.location || 'Unknown';
-
-  const status = booking.status?.toUpperCase() || 'PENDING';
-  const statusColor = {
-    CONFIRMED: 'bg-green-100 text-green-800',
-    CANCELLED: 'bg-red-100 text-red-800',
-    PENDING: 'bg-yellow-100 text-yellow-800',
-  }[status] || 'bg-gray-100 text-gray-800';
-
   return (
-    <div className="border border-gray-200 rounded-xl shadow-sm bg-white">
+    <div className="border border-gray-200 rounded-2xl shadow-sm bg-white overflow-hidden transition-all">
+      {/* Header */}
       <div
-        className="cursor-pointer px-5 py-4 flex justify-between items-center hover:bg-gray-50 transition"
+        className="cursor-pointer px-6 py-4 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
         onClick={toggleOpen}
       >
-        <h3 className="text-lg font-semibold text-gray-700">Booking #{booking.id}</h3>
-        <span className="text-sm text-gray-500">{isOpen ? '▲' : '▼'}</span>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">
+            Booking #{booking?.id} — {booking?.vehicleName}
+          </h3>
+          <span className={`inline-block mt-1 text-xs font-semibold px-3 py-1 rounded-full ${statusColor}`}>
+            {status}
+          </span>
+        </div>
+        {isOpen ? (
+          <FaChevronUp className="text-gray-500" />
+        ) : (
+          <FaChevronDown className="text-gray-500" />
+        )}
       </div>
 
+      {/* Body */}
       {isOpen && (
-        <div className="px-6 pb-5 pt-2 text-gray-700 text-sm space-y-3">
-          {/* Booking Status Badge */}
-          <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
-            Status: {status}
+        <div className="px-6 py-4 space-y-4 text-sm text-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center">
+              <FaCalendarAlt className="mr-2 text-indigo-600" />
+              <span><strong>Pickup:</strong> {booking?.pickupDate || 'N/A'}</span>
+            </div>
+            <div className="flex items-center">
+              <FaCalendarAlt className="mr-2 text-pink-500" />
+              <span><strong>Return:</strong> {booking?.returnDate || 'N/A'}</span>
+            </div>
+            <div className="flex items-center">
+              <FaClock className="mr-2 text-yellow-600" />
+              <span><strong>Duration:</strong> {durationDays > 0 ? `${durationDays} day(s)` : 'N/A'}</span>
+            </div>
+            <div className="flex items-center">
+              <FaCar className="mr-2 text-green-600" />
+              <span><strong>Vehicle No:</strong> {booking?.vehicleNumber || 'N/A'}</span>
+            </div>
           </div>
 
-          <div className="flex items-center">
-            <FaCalendarAlt className="mr-2 text-indigo-500" />
-            Date: <span className="ml-2">{date}</span>
-          </div>
-          <div className="flex items-center">
-            <FaClock className="mr-2 text-yellow-500" />
-            Time: <span className="ml-2">{fromTime} - {toTime}</span>
-          </div>
-          <div className="flex items-center">
-            <FaMapMarkerAlt className="mr-2 text-red-500" />
-            Location: <span className="ml-2">{location} ({place})</span>
-          </div>
-          <div className="flex items-center">
-            <FaCar className="mr-2 text-green-600" />
-            Vehicle: <span className="ml-2">{vehicle}</span>
+          <div className="flex items-center mt-1 text-green-700 text-base font-semibold">
+            💰 Total Amount:
+            <span className="ml-2 text-xl">
+              ₹{booking?.totalAmount != null ? booking.totalAmount.toFixed(2) : 'N/A'}
+            </span>
           </div>
 
-          
-          <div className="flex items-center">
-            ⏱ Duration: <span className="ml-2 font-medium">{durationHours.toFixed(2)} hour(s)</span>
-          </div>
-          <div className="flex items-center text-green-700 font-semibold">
-            💰 Total Price: <span className="ml-2 text-xl">₹{totalPrice.toFixed(2)}</span>
-          </div>
-
-          {booking.status !== 'CANCELLED' && (
+          {/* Cancel Button */}
+          <div className="flex justify-start">
             <button
-              onClick={() => onCancel(booking.id)}
-              className="mt-3 bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600 flex items-center justify-center"
+              onClick={() => handleCancel(booking.id)}
+              disabled={status === 'CANCELLED' || isCancelling}
+              className={`mt-2 px-5 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 ${
+                status === 'CANCELLED'
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : isCancelling
+                  ? 'bg-yellow-500 text-white cursor-wait'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
             >
-              <FaTrash className="mr-2" /> Cancel Booking
+              <FaTrash />
+              {status === 'CANCELLED'
+                ? 'Cancelled'
+                : isCancelling
+                ? 'Cancelling...'
+                : 'Cancel Booking'}
             </button>
-          )}
+          </div>
 
-          <div className="mt-2">
+          {/* Invoice Generator */}
+          <div className="pt-4 border-t border-gray-200">
             <GenerateInvoice booking={booking} user={user} />
           </div>
         </div>

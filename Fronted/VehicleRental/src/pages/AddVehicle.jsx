@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import AdminDashboard2 from './AdminDashboard2';
+import { useAuth } from '../context/AuthContext';
 
 export default function AddVehicle() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
+    vehicleNumber: '', // ✅ added
     vehicleType: '',
     brand: '',
     model: '',
@@ -14,6 +17,7 @@ export default function AddVehicle() {
     seatingCapacity: '',
     location: '',
     description: '',
+    vehicleStatus: 'Available',
     image: null,
   });
 
@@ -35,7 +39,7 @@ export default function AddVehicle() {
     if (formData.image) {
       const imageData = new FormData();
       imageData.append('file', formData.image);
-      imageData.append('upload_preset', 'unsigned_preset'); // 👈 your Cloudinary preset
+      imageData.append('upload_preset', 'unsigned_preset'); // 🔁 Replace with your Cloudinary preset
 
       try {
         const imgRes = await fetch('https://api.cloudinary.com/v1_1/dkcuquwmg/image/upload', {
@@ -51,8 +55,9 @@ export default function AddVehicle() {
       }
     }
 
-    // 🚀 Send data to backend
+    // 🌐 Send data to backend
     const bodyParams = new URLSearchParams({
+      vehicleNumber: formData.vehicleNumber,
       vehicleType: formData.vehicleType,
       brand: formData.brand,
       model: formData.model,
@@ -68,10 +73,13 @@ export default function AddVehicle() {
     });
 
     try {
+      const token = localStorage.getItem('token'); // ✅ Get JWT
+
       const response = await fetch('http://localhost:8080/api/vehicles/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${token}`, // ✅ Add token header
         },
         body: bodyParams,
       });
@@ -79,7 +87,6 @@ export default function AddVehicle() {
       if (response.ok) {
         const result = await response.json();
         alert('Vehicle listed successfully!');
-        console.log(result);
       } else {
         const errorText = await response.text();
         alert('Error: ' + errorText);
@@ -91,10 +98,11 @@ export default function AddVehicle() {
   };
 
   return (
-    <div className='flex'>
-      <div className='w-64'>
-        <AdminDashboard2 />
-      </div>
+    <div className='flex min-h-screen'>
+      <div className="w-64 fixed top-0 left-0 h-full bg-white shadow z-10">
+    <AdminDashboard2 />
+  </div>
+
       <div className='p-6 md:p-10 max-w-5xl mx-auto'>
         <h2 className='text-3xl font-bold mb-2'>Add New Vehicle</h2>
         <p className='text-gray-500 mb-6'>
@@ -111,6 +119,16 @@ export default function AddVehicle() {
               onChange={handleChange}
               className='border border-gray-300 rounded p-2 w-full'
             />
+          </div>
+          <div>
+            <label className='block font-medium text-gray-900 mb-1'>Vehicle Number</label>
+            <input 
+              type="text" 
+              name='vehicleNumber'
+              value={formData.vehicleNumber}
+              onChange={handleChange}
+              className='w-full border border-gray-700 rounded p-2'
+              />
           </div>
 
           <div className='grid md:grid-cols-2 gap-4'>
